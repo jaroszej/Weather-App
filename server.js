@@ -12,27 +12,30 @@ app.use(express.static("public"));
 app.use(bodyParser.urlencoded({ extended: true }));
 app.set("view engine" , "ejs");
 
-// index page
 app.get("/", function(req, res) {
     res.render("index", { weather: null, error: null });
 });
 
-// POST request- using city and api key as args gets data from OpenWeatherMap
 app.post('/', function(req, res) {
-    // get city name
-    let city = req.body.city;
 
-    // find data for city
+    let { city } = req.body;
+
     let url = `http://api.openweathermap.org/data/2.5/weather?q=${city}&units=metric&appid=${apiKey}`;
 
     request(url, function(err, response, body) {
-        // check json data fetched
         if (err) {
-            res.render('index', { weather: null, error: 'Error, please try again' });
+            console.error('API Error:', err)
+            if (err !== 429) {
+                res.render('index', { weather: null, error: 'Error, please try again' });
+            } else {
+                res.render('index', { weather: null, error: 'OpenWeatherMap Free API limit reached' })
+            }
         } else {
             let weather = JSON.parse(body);
 
-            console.log(weather);
+            console.log('body', body)
+
+            console.log('test', weather);
 
             if (weather.main == undefined) {
                 res.render('index', { weather: null, error: 'Error, please try again' });
@@ -52,15 +55,10 @@ app.post('/', function(req, res) {
                     visibility = `${weather.visibility}`,
                     main = `${weather.weather[0].main}`,
                     weatherFahrenheit;
+
                 weatherFahrenheit = (weatherTemp * 9) / 5 + 32;
+                weatherFahrenheit = Math.round(weatherFahrenheit * 100) / 100;
 
-                // keep just 2 decimal places
-                function roundToTwo(num) {
-                    return + (Math.round(num + "e+2") + "e-2");
-                }
-                weatherFahrenheit = roundToTwo(weatherFahrenheit);
-
-                // render data to the page
                 res.render("index", {
                     weather: weather,
                     place: place,
